@@ -19,13 +19,18 @@ Briefly document the main data-handling decisions that matter for your analysis.
 #| label: data-preparation-code
 # Write your data-preparation code here.
 library(tidyverse)
-library(janitor)
-library(patchwork)
-library(ggplot2)
+library(sf)
+library(ggspatial) 
+library(prettymapr)
+library(patchwork) 
 library(spatstat)
+library(janitor)
+library(ggplot2)
 
-city_wards <- read_csv("data/city_wards.shp")
-spec(city_wards)
+city_wards <- read_sf("data/city_wards.shp")
+ward_profiles <- read.csv("data/ward_profiles.csv")
+incident_reports <- read.csv("data/incident_reports.csv")
+
 ```
 
 Write your `Data Preparation Notes` answer here.
