@@ -6,18 +6,26 @@ editor: visual
 ---
 
 <!--- DO NOT DELETE THIS LINE --->
+
 <!--- METADATA ANCHOR: MA22019-CW2-2026 --->
 
 # Data Preparation Notes
 
 <!--- DO NOT DELETE THIS LINE - DATA PREPARATION NOTES ANCHOR --->
 
-Briefly document the main data-handling decisions that matter for your
-analysis. This section may be short prose or one small table.
+Briefly document the main data-handling decisions that matter for your analysis. This section may be short prose or one small table.
 
 ```{r}
 #| label: data-preparation-code
 # Write your data-preparation code here.
+library(tidyverse)
+library(janitor)
+library(patchwork)
+library(ggplot2)
+library(spatstat)
+
+city_wards <- read_csv("data/city_wards.shp")
+spec(city_wards)
 ```
 
 Write your `Data Preparation Notes` answer here.
@@ -26,8 +34,7 @@ Write your `Data Preparation Notes` answer here.
 
 <!--- DO NOT DELETE THIS LINE - TASK 1 ANCHOR --->
 
-Identify and investigate the most important spatial patterns in the incident
-data.
+Identify and investigate the most important spatial patterns in the incident data.
 
 ```{r}
 #| label: task-1-code
@@ -40,8 +47,7 @@ Write your Task 1 answer here.
 
 <!--- DO NOT DELETE THIS LINE - TASK 2 ANCHOR --->
 
-Use the available neighbourhood data to develop and justify possible
-explanations for the patterns you identified.
+Use the available neighbourhood data to develop and justify possible explanations for the patterns you identified.
 
 ```{r}
 #| label: task-2-code
@@ -54,8 +60,7 @@ Write your Task 2 answer here.
 
 <!--- DO NOT DELETE THIS LINE - TASK 3 ANCHOR --->
 
-Make a small number of evidence-based recommendations for priority areas or
-actions.
+Make a small number of evidence-based recommendations for priority areas or actions.
 
 ```{r}
 #| label: task-3-code
