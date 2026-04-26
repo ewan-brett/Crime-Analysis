@@ -89,28 +89,66 @@ Identify and investigate the most important spatial patterns in the incident dat
 #| label: task-1-code
 # Write your Task 1 code here.
 
+incidents_per_ward <- incidents_wards %>% 
+  st_drop_geometry() %>% 
+  count(correct_ward, name = "n_incidents")
 
-incidents_wards %>% 
+top_incidents_per_ward <- incidents_per_ward %>% 
+  arrange(desc(n_incidents)) %>% 
+  head(8)
+
+incidents_per_ward_plot <- top_incidents_per_ward %>% 
+  ggplot(aes(x = reorder(correct_ward, n_incidents), y = n_incidents)) +
+  geom_col(fill = "violet") +
+  coord_flip() +
+  labs(
+    x = "Ward",
+    y = "Number of incidents",
+    title = "Top 8 wards by incident count") +
+  theme_minimal()
+
+spatial_distribution_incidents <- incidents_wards %>% 
   ggplot()+
-  geom_sf(data = city_wards)+
-  geom_sf(aes(colour = unemployment_rate), data = incidents_wards)
-  
+  geom_sf(data = city_wards, fill = "grey98", colour = "black")+
+  geom_sf(data = incidents_wards, alpha = 0.6, size = 0.6, colour = "black")+
+  theme_bw()+
+  labs(title = "Spatial distribution of incident reports", x = "Longitude", y = "Latitude")
 
-incidents_wards %>% 
-  ggplot()+
-  geom_sf(data = city_wards)+
-  geom_sf(aes(colour = deprivation_score), data = incidents_wards)
-  
+incidents_per_ward_plot + spatial_distribution_incidents
 
+incident_ppp <- ppp(
+  st_coordinates(incidents_wards)[,1],
+  st_coordinates(incidents_wards)[,2],
+  window = as.owin(city_wards))
 
-cor(incidents_wards$unemployment_rate, incidents_wards$deprivation_score)
+density_map <- density.ppp(incident_ppp, edge = TRUE, sigma = 3000)
+plot(density_map, main = "Kernel-smoothed density of incidents")
 
-incidents_wards
-  
+areas_counts <- city_wards_profiles %>% 
+  left_join(incidents_per_ward, by = c("ward_name" = "correct_ward")) %>% 
+  mutate(n_incidents = replace_na(n_incidents, 0))
 
+top_ward <- areas_counts %>% 
+  slice_max(n_incidents, n = 1)
+
+choropleth_map <- areas_counts %>% 
+  ggplot(aes(fill = n_incidents)) +
+    geom_sf() +
+    geom_sf_text(data = top_ward, aes(label = ward_name), size = 3, vjust = -1.8, hjust = -0.05)+
+    theme_bw() +
+    scale_fill_distiller(palette = "Reds", trans = "reverse") +
+    labs(
+        x = "Longitude", y = "Latitude",
+        fill = "Incidents\nper ward",
+        title = "Incidents per ward")
+choropleth_map
 ```
 
 Write your Task 1 answer here.
+
+I first grouped by ward and computed the number of incidents per ward. I found that there was significant variation between wards, with some wards such as "Canal Side" having no incidents, and others have many incidents such as "Maple Cross" with 337. I plotted the spatial distribution of incidents, and found that there was a significant North-South divide, with the majority of incidents taking place in the North of the city. More specifically, the North-East was the most incident-heavy region. I plotted the kernel-smoothed incident density to visualise the pattern of expected number of incidents. Again it was clear that most of the incidents occured in the north-east. I plotted a choropleth map to give a better visualisation of which wards suffered the most incidents. Maple Cross was the most significant in terms of incident frequency and, while we also see some hotspots in the east and North-west. 
+
+
 
 # Task 2
 

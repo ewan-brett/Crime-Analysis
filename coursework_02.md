@@ -120,97 +120,87 @@ incident data.
 ``` r
 # Write your Task 1 code here.
 
+incidents_per_ward <- incidents_wards %>% 
+  st_drop_geometry() %>% 
+  count(correct_ward, name = "n_incidents")
 
-incidents_wards %>% 
+top_incidents_per_ward <- incidents_per_ward %>% 
+  arrange(desc(n_incidents)) %>% 
+  head(8)
+
+incidents_per_ward_plot <- top_incidents_per_ward %>% 
+  ggplot(aes(x = reorder(correct_ward, n_incidents), y = n_incidents)) +
+  geom_col(fill = "violet") +
+  coord_flip() +
+  labs(
+    x = "Ward",
+    y = "Number of incidents",
+    title = "Top 8 wards by incident count") +
+  theme_minimal()
+
+spatial_distribution_incidents <- incidents_wards %>% 
   ggplot()+
-  geom_sf(data = city_wards)+
-  geom_sf(aes(colour = unemployment_rate), data = incidents_wards)
+  geom_sf(data = city_wards, fill = "grey98", colour = "black")+
+  geom_sf(data = incidents_wards, alpha = 0.6, size = 0.6, colour = "black")+
+  theme_bw()+
+  labs(title = "Spatial distribution of incident reports", x = "Longitude", y = "Latitude")
+
+incidents_per_ward_plot + spatial_distribution_incidents
 ```
 
 ![](coursework_02_files/figure-commonmark/task-1-code-1.png)
 
 ``` r
-incidents_wards %>% 
-  ggplot()+
-  geom_sf(data = city_wards)+
-  geom_sf(aes(colour = deprivation_score), data = incidents_wards)
+incident_ppp <- ppp(
+  st_coordinates(incidents_wards)[,1],
+  st_coordinates(incidents_wards)[,2],
+  window = as.owin(city_wards))
+
+density_map <- density.ppp(incident_ppp, edge = TRUE, sigma = 3000)
+plot(density_map, main = "Kernel-smoothed density of incidents")
 ```
 
 ![](coursework_02_files/figure-commonmark/task-1-code-2.png)
 
 ``` r
-cor(incidents_wards$unemployment_rate, incidents_wards$deprivation_score)
+areas_counts <- city_wards_profiles %>% 
+  left_join(incidents_per_ward, by = c("ward_name" = "correct_ward")) %>% 
+  mutate(n_incidents = replace_na(n_incidents, 0))
+
+top_ward <- areas_counts %>% 
+  slice_max(n_incidents, n = 1)
+
+choropleth_map <- areas_counts %>% 
+  ggplot(aes(fill = n_incidents)) +
+    geom_sf() +
+    geom_sf_text(data = top_ward, aes(label = ward_name), size = 3, vjust = -1.8, hjust = -0.05)+
+    theme_bw() +
+    scale_fill_distiller(palette = "Reds", trans = "reverse") +
+    labs(
+        x = "Longitude", y = "Latitude",
+        fill = "Incidents\nper ward",
+        title = "Incidents per ward")
+choropleth_map
 ```
 
-    [1] 0.9779709
-
-``` r
-incidents_wards
-```
-
-    Simple feature collection with 987 features and 14 fields
-    Geometry type: POINT
-    Dimension:     XY
-    Bounding box:  xmin: 449742.4 ymin: 337366.6 xmax: 461778.5 ymax: 347033.8
-    Projected CRS: OSGB36 / British National Grid
-    First 10 features:
-       incident_id ward_recorded       date
-    1     INC_0001    Riverstead 2025-09-21
-    2     INC_0002    Riverstead 2025-09-25
-    3     INC_0003    Riverstead 2025-05-05
-    4     INC_0004    Riverstead 2025-02-12
-    5     INC_0005    Riverstead 2025-07-20
-    6     INC_0006    Riverstead 2025-07-04
-    7     INC_0007    Riverstead 2025-04-06
-    8     INC_0008    Riverstead 2025-12-01
-    9     INC_0009    Riverstead 2025-09-30
-    10    INC_0010    Riverstead 2025-06-18
-                                                                                      description
-    1    Report noted repeated damage to bins and surrounding fixtures. Nearby property affected.
-    2           Damage reported to fencing and nearby street furniture. Nearby property affected.
-    3          Damage reported to fencing and nearby street furniture. Possible overnight timing.
-    4                            Graffiti and minor vandalism observed on public-facing property.
-    5                            Graffiti and minor vandalism observed on public-facing property.
-    6         Broken glass and signs of overnight damage were recorded. Nearby property affected.
-    7                                              Repeated late-night noise reported near flats.
-    8  Street-safety report logged after repeated uneasy encounters. Pedestrian route referenced.
-    9                          Residents described persistent disturbance from street gatherings.
-    10          Damage reported to fencing and nearby street furniture. Nearby property affected.
-       ward_id correct_ward unemployment_rate deprivation_score rental_share
-    1      W02   Riverstead              14.6             81.39         67.5
-    2      W02   Riverstead              14.6             81.39         67.5
-    3      W02   Riverstead              14.6             81.39         67.5
-    4      W02   Riverstead              14.6             81.39         67.5
-    5      W02   Riverstead              14.6             81.39         67.5
-    6      W02   Riverstead              14.6             81.39         67.5
-    7      W02   Riverstead              14.6             81.39         67.5
-    8      W02   Riverstead              14.6             81.39         67.5
-    9      W02   Riverstead              14.6             81.39         67.5
-    10     W02   Riverstead              14.6             81.39         67.5
-       population_density transport_access lighting_coverage distance_police_hub
-    1                6057             48.6              70.6                   3
-    2                6057             48.6              70.6                   3
-    3                6057             48.6              70.6                   3
-    4                6057             48.6              70.6                   3
-    5                6057             48.6              70.6                   3
-    6                6057             48.6              70.6                   3
-    7                6057             48.6              70.6                   3
-    8                6057             48.6              70.6                   3
-    9                6057             48.6              70.6                   3
-    10               6057             48.6              70.6                   3
-       listed_building_share                  geometry
-    1                   24.3 POINT (454223.5 343867.6)
-    2                   24.3 POINT (455220.4 342344.2)
-    3                   24.3   POINT (454525.9 343659)
-    4                   24.3   POINT (454919 343857.1)
-    5                   24.3 POINT (455045.4 343545.5)
-    6                   24.3 POINT (454102.6 343375.6)
-    7                   24.3 POINT (454903.9 343139.3)
-    8                   24.3 POINT (455853.4 343745.8)
-    9                   24.3 POINT (454869.9 343420.6)
-    10                  24.3   POINT (454318 343134.8)
+![](coursework_02_files/figure-commonmark/task-1-code-3.png)
 
 Write your Task 1 answer here.
+
+I first grouped by ward and computed the number of incidents per ward. I
+found that there was significant variation between wards, with some
+wards such as “Canal Side” having no incidents, and others have many
+incidents such as “Maple Cross” with 337. I plotted the spatial
+distribution of incidents, and found that there was a significant
+North-South divide, with the majority of incidents taking place in the
+North of the city. More specifically, the North-East was the most
+incident-heavy region. I plotted the kernel-smoothed incident density to
+visualise the pattern of expected number of incidents. Again it was
+clear that most of the incidents occured in the north-east. I plotted a
+choropleth map to give a better visualisation of which wards suffered
+the most incidents. Maple Cross was the most significant in terms of
+incident frequency and, while we also see some hotspots in the east and
+North-west.
 
 # Task 2
 
@@ -244,4 +234,4 @@ Write your Task 3 answer here.
 
 Add references only if needed.
 
-    **Prose Word Count:** 559 words (441 words under the 1000-word limit)
+    **Prose Word Count:** 708 words (292 words under the 1000-word limit)
