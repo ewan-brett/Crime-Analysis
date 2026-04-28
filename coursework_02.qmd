@@ -131,7 +131,7 @@ areas_counts <- city_wards_profiles %>%
 top_ward <- areas_counts %>% 
   slice_max(n_incidents, n = 1)
 
-choropleth_map <- areas_counts %>% 
+choropleth_map1 <- areas_counts %>% 
   ggplot(aes(fill = n_incidents)) +
     geom_sf() +
     geom_sf_text(data = top_ward, aes(label = ward_name), size = 3, vjust = -1.8, hjust = -0.05)+
@@ -141,7 +141,7 @@ choropleth_map <- areas_counts %>%
         x = "Longitude", y = "Latitude",
         fill = "Incidents\nper ward",
         title = "Incidents per ward")
-choropleth_map
+choropleth_map1
 ```
 
 Write your Task 1 answer here.
@@ -159,9 +159,75 @@ Use the available neighbourhood data to develop and justify possible explanation
 ```{r}
 #| label: task-2-code
 # Write your Task 2 code here.
+
+
+
+correlation_matrix <- areas_counts %>% 
+  st_drop_geometry() %>% 
+  select(n_incidents, unemployment_rate, deprivation_score, rental_share,
+         population_density, transport_access, lighting_coverage,
+         distance_police_hub, listed_building_share) %>% 
+  cor(use = "complete.obs")
+
+incident_correlations <- tibble(
+  variable = names(correlation_matrix["n_incidents", ]),
+  correlation = as.numeric(correlation_matrix["n_incidents", ])) %>% 
+  arrange(desc(correlation))
+
+pca_data <- areas_counts %>% 
+  st_drop_geometry() %>% 
+  select(unemployment_rate, deprivation_score, rental_share,
+         population_density, transport_access, lighting_coverage,
+         distance_police_hub, listed_building_share) %>% 
+  drop_na()
+
+pca_result <- prcomp(pca_data, scale = TRUE)
+var_explained <- pca_result$sdev^2 / sum(pca_result$sdev^2)
+cumsum(var_explained)[1:5]
+
+scree_df <- data.frame(
+    PC  = seq_along(var_explained),
+    Var = var_explained)
+
+ggplot(scree_df[1:8, ], aes(x = PC, y = Var)) +
+    geom_col(fill = "steelblue") +
+    geom_line(aes(y = cumsum(Var)[1:8]), color = "red", linewidth = 1) +
+    geom_point(aes(y = cumsum(Var)[1:8]), color = "red", size = 2) +
+    geom_hline(yintercept = 0.9, linetype = "dashed") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_bw() +
+    labs(
+        x = "Principal Component", y = "Variance Explained",
+        title = "Scree Plot"
+    )
+
+pcas <- pca_result$rotation
+
+areas_counts_pca <- areas_counts %>% 
+  drop_na()
+
+areas_counts_pca$pca1 <- pca_result$x[,1]
+
+choropleth_map2 <- areas_counts_pca %>% 
+  ggplot(aes(fill = pca1)) +
+  geom_sf(data = areas_counts, fill = "grey85", colour = "black", linewidth = 0.25)+
+    geom_sf() +
+    theme_bw() +
+    scale_fill_distiller(palette = "Reds", trans = "reverse") +
+    labs(
+        x = "Longitude", y = "Latitude",
+        fill = "PC1\nby ward",
+        title = "PC1 effect by ward")
+
+choropleth_map2
+
 ```
 
 Write your Task 2 answer here.
+
+- I created a correlation matrix to see if any variables were highly correlated with number of incidents 
+- i deciphered that unemployment rate deprivation score both had 0.49 correlation with number of incidents, so these could be worth investigating.
+
 
 # Task 3
 
