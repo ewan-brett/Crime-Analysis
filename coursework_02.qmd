@@ -13,14 +13,13 @@ editor: visual
 
 <!--- DO NOT DELETE THIS LINE - DATA PREPARATION NOTES ANCHOR --->
 
-Briefly document the main data-handling decisions that matter for your analysis. This section may be short prose or one small table.
 
 ```{r}
 #| label: data-preparation-code
 #| warning: false
 #| message: false
-# Write your data-preparation code here.
 
+# packages
 library(tidyverse)
 library(sf)
 library(ggspatial)
@@ -29,61 +28,73 @@ library(patchwork)
 library(spatstat)
 library(janitor)
 
+# loading data
 city_wards <- read_sf("data/city_wards.shp")
 ward_profiles <- read.csv("data/ward_profiles.csv")
 incident_reports <- read.csv("data/incident_reports.csv")
+```
 
+```{r}
 ward_profiles <- ward_profiles %>% 
   mutate(ward_name = gsub("-", " ", ward_name)) %>% 
   mutate(rental_share = as.numeric(gsub("%","",rental_share)))
 
+ward_profiles_missing <- ward_profiles %>% 
+  summarise(across(everything(), ~sum(is.na(.))))
+```
+
+The data was checked for inconsistent formatting in any variables. "ward_name" is inconsistent, as some have hyphens in ward_profiles but not in city_wards. "rental_share" in ward_profiles has inconsistent use of % sign. These were removed and then the values were asserted to be numeric. 
+
+In ward_profiles there are 3 missing "transport_access" values and 3 missing "listed_building_share" values. These have been kept to avoid losing data unnecessarily in other variables, and will be deal with seperately when doing specific analysis. 
+
+```{r}
 city_wards_profiles <- city_wards %>% 
   left_join(ward_profiles, by = c("ward_id", "ward_name"))
 
-cat("Total wards in city:", nrow(city_wards),"\n")
+```
 
-ward_profiles_missing <- ward_profiles %>% 
-  summarise(across(everything(), ~sum(is.na(.))))
+The ward geometries and info were joined by ward_id and ward_name, as these now match after data cleaning. left_join() was used in order to keep all 32 ward geometries, and add info from ward_profiles without risk of losing anything.
 
-incident_sf <- st_as_sf(incident_reports, coords = c("x", "y"), crs = st_crs(city_wards_profiles)) #turn the coords from incident_reports into a sf with the correct coordinate system. then use st_join to join this with the city_wards_profiles outline.
+```{r}
+
+incident_sf <- st_as_sf(incident_reports, coords = c("x", "y"), crs = st_crs(city_wards_profiles)) 
 
 incidents_wards <- st_join(incident_sf, city_wards_profiles)
 
 no_mislabelled_incidents <- incidents_wards %>% 
   filter(ward_name.x != ward_name.y) %>% 
   nrow()    # 39 mislabelled incidents.
+```
+
+Incident reports were joined to the their wards by geometry by st_join(). Some labels given on the reports were found to be inaccurate, with 39 mislabels compared to coordinates given. 
+
+```{r}
 
 cat("No. incident reports with mislabelled wards:", no_mislabelled_incidents, "\n")
 
 incidents_wards <- incidents_wards %>% 
   rename(ward_recorded = ward_name.x, correct_ward = ward_name.y)
 
-
 ```
 
-Write your `Data Preparation Notes` answer here.
-
-I checked the data for inconsistent formatting in any variables. I found that ward_name is inconsistent, as some have hyphens in ward_profiles but not in city_wards. I also found that rental_share in ward_profiles is inconsistent as some values have % signs and some don't. I removed these and asserted that the value was numeric. I found that in ward_profiles there are in 3 missing values in transport_access and 3 missing values in listed_building_share. I have left these in so we don't lose data unnecessarily, but will have to deal with them when doing analysis of these variables. I joined the ward geometries and profiles so that each ward has its info included. I used left_join so that all the info from ward_profiles is added to each ward, without risk of losing any. I joined by ward_id and ward_name as I had already cleaned these so they should match up, and I didn't want columns to duplicate unnecessarily. incident_reports showed no duplicated entries. I double-checked whether the labels for ward lined up with the coordinates given. After converting incident reports to sf and joining to city_wards_profiles I found that 39 entries did not line up. I decided to trust the coordinates given rather than the label, as they are more likely to be accurate, especially for incidents happening on borders which have been mislabelled. 
+Throughout analysis raw coordinates were used as they were more likely to be accurate than labels, as they are less prone to data entry issues or confusion near borders. 
 
 
-- ward_name is inconsistently formatted, some have hyphens in ward_profiles
-- city_wards and ward_profiles both have 32 unique rows, so this is consistent, i checked all names now match up
-- I also checked all the ward_names in incident_reports are formatted the same and match up
-- In ward_profiles, rental_share is inconsistently formatted. i have removed % signs and made the values numeric.
-- in ward_profiles there are 3 missing values in transport_access and 3 missing values in listed_building_share. These are kept in but will be removed before doing analysis on those variables
-- incident_reports and city_wards are both free of missing values
-- no duplicates in incident_reports
-- i checked consistency between coordinates and labels in incident_reports. i found 39 incidents which had labels which are not consistent with the coordinates given.
-- i renamed the ward in which it was recorded as ward_recorded and the ward it lies in by coordinates as correct_ward.
-- i am trusting the coordinates to be more accurate as labels may have been put in incorrectly, or the place lies on the border and they were labelled incorrectly
-- i joined the ward_profiles to the city_wards using left_join, so that each ward has its relevant info and geometry. i joined by ward_id and ward_name as i already cleaned these to be the same, and i didnt want columns to duplicate
+Scales of each variable were interpreted:
+- unemployment_rate (%)
+- deprivation_score (0-100) i.e. higher score higher deprivation
+- rental_share (%)
+- population_density (people/mile^2)
+- transport_access (% people with transport accessible by foot)
+- lighting_coverage (% roads/paths covered by streetlamps)
+- distance_police_hub (miles)
+- listed_building_share (%)
 
 
 # Task 1
 
 <!--- DO NOT DELETE THIS LINE - TASK 1 ANCHOR --->
 
-Identify and investigate the most important spatial patterns in the incident data.
 
 ```{r}
 #| label: task-1-code
@@ -107,6 +118,12 @@ incidents_per_ward_plot <- top_incidents_per_ward %>%
     title = "Top 8 wards by incident count") +
   theme_minimal()
 
+```
+
+Incidents per ward were computed: there was significant variation between wards, with some wards such as "Canal Side" having no incidents, and others having many incidents such as "Maple Cross" with 337. 
+
+
+```{r}
 spatial_distribution_incidents <- incidents_wards %>% 
   ggplot()+
   geom_sf(data = city_wards, fill = "grey98", colour = "black")+
@@ -114,27 +131,39 @@ spatial_distribution_incidents <- incidents_wards %>%
   theme_bw()+
   labs(title = "Spatial distribution of incident reports", x = "Longitude", y = "Latitude")
 
-incidents_per_ward_plot + spatial_distribution_incidents
+spatial_distribution_incidents
 
+```
+
+Spatial distribution of incidents was plotted to see trends.
+
+```{r}
 incident_ppp <- ppp(
   st_coordinates(incidents_wards)[,1],
   st_coordinates(incidents_wards)[,2],
   window = as.owin(city_wards))
 
-density_map <- density.ppp(incident_ppp, edge = TRUE, sigma = 3000)
+density_map <- density.ppp(incident_ppp, edge = TRUE, sigma = 4000)
 plot(density_map, main = "Kernel-smoothed density of incidents")
 
+```
+
+Kernel-smoothed density showed the incidents most densely occurred in the North-East. Sigma=4000 was found to be optimal. 
+
+A Choropleth map to investigate incidents per ward was plotted:
+
+```{r}
 areas_counts <- city_wards_profiles %>% 
   left_join(incidents_per_ward, by = c("ward_name" = "correct_ward")) %>% 
   mutate(n_incidents = replace_na(n_incidents, 0))
 
 top_ward <- areas_counts %>% 
-  slice_max(n_incidents, n = 1)
+  slice_max(n_incidents, n = 3)
 
 choropleth_map1 <- areas_counts %>% 
-  ggplot(aes(fill = n_incidents)) +
+  ggplot(aes(fill = (log(n_incidents+1)))) +
     geom_sf() +
-    geom_sf_text(data = top_ward, aes(label = ward_name), size = 3, vjust = -1.8, hjust = -0.05)+
+    geom_sf_text(data = top_ward, aes(label = ward_name), size = 3, colour = "green")+
     theme_bw() +
     scale_fill_distiller(palette = "Reds", trans = "reverse") +
     labs(
@@ -144,35 +173,65 @@ choropleth_map1 <- areas_counts %>%
 choropleth_map1
 ```
 
-Write your Task 1 answer here.
-
-I first grouped by ward and computed the number of incidents per ward. I found that there was significant variation between wards, with some wards such as "Canal Side" having no incidents, and others have many incidents such as "Maple Cross" with 337. I plotted the spatial distribution of incidents, and found that there was a significant North-South divide, with the majority of incidents taking place in the North of the city. More specifically, the North-East was the most incident-heavy region. I plotted the kernel-smoothed incident density to visualise the pattern of expected number of incidents. Again it was clear that most of the incidents occured in the north-east. I plotted a choropleth map to give a better visualisation of which wards suffered the most incidents. Maple Cross was the most significant in terms of incident frequency and, while we also see some hotspots in the east and North-west. 
-
+When joining incident counts to the wards, there were some NAs as some wards had 0 incidents reported, hence these were replced by 0s. A log scale was added on the incidents to improve readability (and adjusted to avoid log0), as Maple Cross was significantly higher than the rest. Again there are greater numbers of incidents in the North, and there are hotspots in the East and North-west. 
 
 
 # Task 2
 
 <!--- DO NOT DELETE THIS LINE - TASK 2 ANCHOR --->
 
-Use the available neighbourhood data to develop and justify possible explanations for the patterns you identified.
 
 ```{r}
 #| label: task-2-code
 # Write your Task 2 code here.
-
-
 
 correlation_matrix <- areas_counts %>% 
   st_drop_geometry() %>% 
   select(n_incidents, unemployment_rate, deprivation_score, rental_share,
          population_density, transport_access, lighting_coverage,
          distance_police_hub, listed_building_share) %>% 
-  cor(use = "complete.obs")
+  cor(use = "complete.obs") 
 
 incident_correlations <- tibble(
   variable = names(correlation_matrix["n_incidents", ]),
   correlation = as.numeric(correlation_matrix["n_incidents", ])) %>% 
   arrange(desc(correlation))
+
+corplot1 <- areas_counts %>% 
+  ggplot(aes(x = unemployment_rate, y = log(n_incidents+1)))+
+  geom_point()+
+  geom_smooth(method=lm, se = FALSE)
+
+corplot2 <- areas_counts %>% 
+  ggplot(aes(x = deprivation_score, y = log(n_incidents+1)))+
+  geom_point()+
+  geom_smooth(method=lm, se = FALSE)
+
+corplot3 <- areas_counts %>% 
+  ggplot(aes(x = rental_share, y = log(n_incidents+1)))+
+  geom_point()+
+  geom_smooth(method=lm, se = FALSE)
+
+corplot4 <- areas_counts %>% 
+  ggplot(aes(x = distance_police_hub, y = log(n_incidents+1)))+
+  geom_point()+
+  geom_smooth(method=lm, se = FALSE)
+
+corplot5 <- areas_counts %>% 
+  filter(lighting_coverage>50) %>% 
+  ggplot(aes(x = lighting_coverage, y = log(n_incidents+1)))+
+  geom_point()+
+  geom_smooth(method=lm, se = FALSE)
+
+(corplot1 + corplot2) / (corplot3 + corplot4)
+  
+```
+
+First, correlation between incident number and explanatory variables was computed, to see if any had a close relationship. Unemployment, deprivation and distance from police were all highly correlated with number of incidents in that ward. Lighting coverage displayed slight negative correlation. 
+
+PCA was conducted:
+
+```{r}
 
 pca_data <- areas_counts %>% 
   st_drop_geometry() %>% 
@@ -183,25 +242,13 @@ pca_data <- areas_counts %>%
 
 pca_result <- prcomp(pca_data, scale = TRUE)
 var_explained <- pca_result$sdev^2 / sum(pca_result$sdev^2)
-cumsum(var_explained)[1:5]
 
 scree_df <- data.frame(
     PC  = seq_along(var_explained),
     Var = var_explained)
 
-ggplot(scree_df[1:8, ], aes(x = PC, y = Var)) +
-    geom_col(fill = "steelblue") +
-    geom_line(aes(y = cumsum(Var)[1:8]), color = "red", linewidth = 1) +
-    geom_point(aes(y = cumsum(Var)[1:8]), color = "red", size = 2) +
-    geom_hline(yintercept = 0.9, linetype = "dashed") +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_bw() +
-    labs(
-        x = "Principal Component", y = "Variance Explained",
-        title = "Scree Plot"
-    )
-
 pcas <- pca_result$rotation
+
 
 areas_counts_pca <- areas_counts %>% 
   drop_na()
@@ -209,38 +256,123 @@ areas_counts_pca <- areas_counts %>%
 areas_counts_pca$pca1 <- pca_result$x[,1]
 
 choropleth_map2 <- areas_counts_pca %>% 
-  ggplot(aes(fill = pca1)) +
+  ggplot() +
   geom_sf(data = areas_counts, fill = "grey85", colour = "black", linewidth = 0.25)+
-    geom_sf() +
-    theme_bw() +
-    scale_fill_distiller(palette = "Reds", trans = "reverse") +
-    labs(
-        x = "Longitude", y = "Latitude",
-        fill = "PC1\nby ward",
-        title = "PC1 effect by ward")
+  geom_sf(aes(fill = pca1)) +
+  geom_sf(data = incidents_wards, alpha = 0.2, size = 0.6, colour = "green")+
+  theme_bw() +
+  scale_fill_distiller(palette = "Reds", trans = "reverse") +
+  labs(
+      x = "Longitude", y = "Latitude",
+      fill = "PC1\nby ward",
+      title = "PC1 effect by ward")
 
-choropleth_map2
+PC1_barplot <- data.frame(
+  variable = rownames(pcas),
+  loading = pcas[,1]) %>% 
+  ggplot(aes(x = reorder(variable, loading), y = loading)) +
+  geom_col(fill = "violet") +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    x = "Variable",
+    y = "PC1 loading",
+    title = "Loadings for Principal Component 1")
+
+
+areas_counts_pca$pca2 <- pca_result$x[,2]
+
+choropleth_map3 <- areas_counts_pca %>% 
+  ggplot() +
+  geom_sf(data = areas_counts, fill = "grey85", colour = "black", linewidth = 0.25)+
+  geom_sf(aes(fill = pca2)) +
+  geom_sf(data = incidents_wards, alpha = 0.2, size = 0.6, colour = "green")+
+  theme_bw() +
+  scale_fill_distiller(palette = "Reds", trans = "reverse") +
+  labs(
+      x = "Longitude", y = "Latitude",
+      fill = "PC2\nby ward",
+      title = "PC2 effect by ward")
+
+choropleth_map2 + PC1_barplot
+
 
 ```
 
-Write your Task 2 answer here.
+Wards with missing values were removed in order to effectively carry out PCA. Approximately 48% of the variation between ward variables in explained by first principle component. 
 
-- I created a correlation matrix to see if any variables were highly correlated with number of incidents 
-- i deciphered that unemployment rate deprivation score both had 0.49 correlation with number of incidents, so these could be worth investigating.
+PC1 represents a combination of high unemployment, deprivation, rental share, distance from police hub and lower lighting coverage. A choropleth map of the PC1 scores showed a noticeable south to north increase. This is aligned with our increase in incident frequency further north displayed in task 1, as shown by the incident locations overlayed in green. 
+
+PC2 represents a combination of high transport access and population density. There is a West-East increase, which somewhat aligns with the increase of incidents in the East. However looking at the correlation of incidents vs these variables, it is clear that the relationships are significantly weaker than variables highlighted in PC1. Further, population density increase may lead to increased transport infrastructure as well as increased incidents, but it is unlikely that increased transport and incidents are directly related, only correlated. 
+
+Overall, these findings indicate that higher levels of deprivation, unemployment, and distance from police hub are the key factors associated with increased incident counts. Rental share is likely to increase as a by-product of higher deprivation in the area, so it has been discounted as a primary reason for trends found in task 1.
 
 
 # Task 3
 
 <!--- DO NOT DELETE THIS LINE - TASK 3 ANCHOR --->
 
-Make a small number of evidence-based recommendations for priority areas or actions.
-
 ```{r}
 #| label: task-3-code
+#| message: false
 # Write your Task 3 code here.
+
+distance_police_hub_plot <- areas_counts %>% 
+  ggplot(aes(fill = distance_police_hub)) +
+    geom_sf() +
+    geom_sf(data = incidents_wards, alpha = 0.6, size = 0.6, colour = "green")+
+    theme_bw() +
+    scale_fill_distiller(palette = "Reds", trans = "reverse") +
+    labs(
+        x = "Longitude", y = "Latitude",
+        fill = "Distance from Police hub (miles)",
+        title = "Distance from Police hub (miles)")
+
+unemployment_rate_plot <- areas_counts %>% 
+  ggplot(aes(fill = unemployment_rate)) +
+    geom_sf() +
+    geom_sf(data = incidents_wards, alpha = 0.6, size = 0.6, colour = "green")+
+    theme_bw() +
+    scale_fill_distiller(palette = "Reds", trans = "reverse") +
+    labs(
+        x = "Longitude", y = "Latitude",
+        fill = "Unemployment rate (%)",
+        title = "Unemployment rate (%)")
+
+lighting_coverage_plot <- areas_counts %>% 
+  ggplot(aes(fill = lighting_coverage)) +
+    geom_sf() +
+    geom_sf(data = incidents_wards, alpha = 0.6, size = 0.6, colour = "green")+
+    theme_bw() +
+    scale_fill_distiller(palette = "Reds", trans = "reverse") +
+    labs(
+        x = "Longitude", y = "Latitude",
+        fill = "Deprivation score (0-100)",
+        title = "Deprivation score (0-100)")
+
+unemployment_rate_table <- areas_counts %>% 
+  select(ward_name, unemployment_rate, deprivation_score, n_incidents) %>% 
+  arrange(desc(unemployment_rate))
+
+
+ggplot(areas_counts, aes(x = distance_police_hub, y = n_incidents)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  theme_minimal()+
+  labs(title = "Distance from police hub vs no. of incidents", x = "Distance from police hub (miles)", y = "No. of incidents")
+
 ```
 
 Write your Task 3 answer here.
+
+Immediate priority should be given to the Maple Cross and Foxley area, as this is overwhelmingly the most incident dense area. Key strategies to decrease the number of incidents are:
+
+(1) Build a police hub in the North of the city. The northernmost wards lie 5+ miles away from the nearest police hub, and there is strong evidence indicating incidents decrease the closer to the police hub you are.
+
+(2) Invest in food banks, social support, job centres etc in order to lower unemployment and deprivation. Target these strategies on Maple Cross and Market End, which have over 80 deprivation score and over 15% unemployment, the highest of any wards
+
+(3) Install more street lighting in the North, as wards with over 75% lighting coverage have significantly fewer incidents. It would be an effective way of detering incidents from occuring, especially in the densely populated areas.
+
 
 # References
 
