@@ -74,8 +74,6 @@ Incident reports were joined to the their wards by geometry by st_join(). Some l
 
 ```{r}
 
-cat("No. incident reports with mislabelled wards:", no_mislabelled_incidents, "\n")
-
 incidents_wards <- incidents_wards %>% 
   rename(ward_recorded = ward_name.x, correct_ward = ward_name.y)
 

@@ -78,12 +78,6 @@ st_join(). Some labels given on the reports were found to be inaccurate,
 with 39 mislabels compared to coordinates given.
 
 ``` r
-cat("No. incident reports with mislabelled wards:", no_mislabelled_incidents, "\n")
-```
-
-    No. incident reports with mislabelled wards: 39 
-
-``` r
 incidents_wards <- incidents_wards %>% 
   rename(ward_recorded = ward_name.x, correct_ward = ward_name.y)
 ```
