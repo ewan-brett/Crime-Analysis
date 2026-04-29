@@ -152,7 +152,7 @@ plot(density_map, main = "Kernel-smoothed density of incidents")
 
 ```
 
-Kernel-smoothed density showed the incidents most densely occurred in the North-East. A bandwidth of 4000 was used to outline main density patterns without over emphasising certain points. 
+Kernel-smoothed density showed the incidents most densely occurred in the North-East. A bandwidth of 4000 was used to outline main density patterns without over-emphasising certain points. 
 
 A Choropleth map to investigate incidents per ward was plotted:
 
@@ -226,7 +226,7 @@ ggplot(cor_data, aes(x = value, y = log(n_incidents + 1))) +
   labs(x = NULL, y = "No. incidents (log scale)", title = "Relationships between variables and incident counts")
 ```
 
-First, correlation between incident number and explanatory variables was computed, to see if any had a close relationship. Unemployment, deprivation and distance from police were all highly correlated with number of incidents in that ward. Lighting coverage displayed strong negative correlation. These were plotted against a log scale of the incidents to visualise the relationship.
+First, correlation between incident number and explanatory variables was computed, to see if any had a close relationship. Unemployment, deprivation and distance from police were all highly correlated with number of incidents in that ward. Lighting coverage displayed significant negative correlation. These were plotted against a log scale of the incidents to visualise the relationship.
 
 PCA was conducted:
 
