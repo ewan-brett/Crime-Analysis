@@ -247,6 +247,8 @@ negative correlation.
 PCA was conducted:
 
 ``` r
+#|message: FALSE
+
 pca_data <- areas_counts %>% 
   st_drop_geometry() %>% 
   select(unemployment_rate, deprivation_score, rental_share,
@@ -275,7 +277,7 @@ choropleth_map2 <- areas_counts_pca %>%
   geom_sf(aes(fill = pca1)) +
   geom_sf(data = incidents_wards, alpha = 0.2, size = 0.6, colour = "green")+
   theme_bw() +
-  scale_fill_distiller(palette = "Reds", trans = "reverse") +
+  scale_fill_distiller(palette = "YlOrRd", trans = "reverse") +
   labs(
       x = "Longitude", y = "Latitude",
       fill = "PC1\nby ward",
@@ -291,7 +293,7 @@ PC1_barplot <- data.frame(
   labs(
     x = "Variable",
     y = "PC1 loading",
-    title = "Loadings for Principal Component 1")
+    title = "Loadings for\nPrincipal Component 1")
 
 
 areas_counts_pca$pca2 <- pca_result$x[,2]
@@ -302,7 +304,7 @@ choropleth_map3 <- areas_counts_pca %>%
   geom_sf(aes(fill = pca2)) +
   geom_sf(data = incidents_wards, alpha = 0.2, size = 0.6, colour = "green")+
   theme_bw() +
-  scale_fill_distiller(palette = "Reds", trans = "reverse") +
+  scale_fill_distiller(palette = "YlOrRd", trans = "reverse") +
   labs(
       x = "Longitude", y = "Latitude",
       fill = "PC2\nby ward",
@@ -312,6 +314,13 @@ choropleth_map2 + PC1_barplot
 ```
 
 ![](coursework_02_files/figure-commonmark/unnamed-chunk-11-1.png)
+
+``` r
+pc1_scatter <- ggplot(areas_counts_pca, aes(x = pca1, y = log(n_incidents+1))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE)+
+  labs(x = "PC1 loading", y = "No. incidents", title = "PC1 loadings vs No. incidents")
+```
 
 Wards with missing values were removed in order to effectively carry out
 PCA. Approximately 48% of the variation between ward variables in
@@ -326,17 +335,25 @@ overlayed in green.
 
 PC2 represents a combination of high transport access and population
 density. There is a West-East increase, which somewhat aligns with the
-increase of incidents in the East. However looking at the correlation of
-incidents vs these variables, it is clear that the relationships are
-significantly weaker than variables highlighted in PC1. Further,
-population density increase may lead to increased transport
-infrastructure as well as increased incidents, but it is unlikely that
-increased transport and incidents are directly related, only correlated.
+increase of incidents in the East.
+
+However population density and transport access both only have 0.33
+correlation coefficient with incident number, so it is clear that these
+relationships are significantly weaker than those shown in PC1 and
+therefore are less meaningful in explaining the trends. Further, note
+that higher population density naturally increases incidents as there
+are more people close together. It also leads to higher transport access
+as densely populated areas are more likely to have investment in
+transport. However transport access and incidents are unlikely to be
+directly linked, unless a lot of incidents occur on transport but that
+does not seem to be the case after inspection of the incident
+descriptions.
 
 Overall, these findings indicate that higher levels of deprivation,
 unemployment, and distance from police hub are the key factors
 associated with increased incident counts. Rental share is likely to
-increase as a by-product of higher deprivation in the area, so it has
+increase as a by-product of higher deprivation in the area (higher
+deprivation means less people can afford their own house), so it has
 been discounted as a primary reason for trends found in task 1.
 
 # Task 3
@@ -393,26 +410,86 @@ ggplot(areas_counts, aes(x = distance_police_hub, y = n_incidents)) +
 
 ![](coursework_02_files/figure-commonmark/task-3-code-1.png)
 
+``` r
+dep_incidents <- areas_counts %>% 
+  st_drop_geometry() %>% 
+  mutate(high_dep = deprivation_score > 70) %>% 
+  group_by(high_dep) %>% 
+  summarise(mean_incidents = mean(n_incidents))
+
+total_incidents <- sum(areas_counts$n_incidents)
+
+police_distance_incidents <- areas_counts %>% 
+  st_drop_geometry() %>% 
+  mutate(high_distance = distance_police_hub >= 4) %>% 
+  group_by(high_distance) %>% 
+  summarise(mean_incidents = mean(n_incidents), percentage = 100*sum(n_incidents)/total_incidents)
+
+areas_counts %>% 
+  filter(ward_name == "Foxley")
+```
+
+    Simple feature collection with 1 feature and 11 fields
+    Geometry type: POLYGON
+    Dimension:     XY
+    Bounding box:  xmin: 456986.4 ymin: 344513.4 xmax: 458553.9 ymax: 345908.9
+    Projected CRS: OSGB36 / British National Grid
+    # A tibble: 1 × 12
+      ward_id ward_name                                   geometry unemployment_rate
+    * <chr>   <chr>                                  <POLYGON [m]>             <dbl>
+    1 W16     Foxley    ((458553.9 345684.9, 457948.9 344538.3, 4…                14
+    # ℹ 8 more variables: deprivation_score <dbl>, rental_share <dbl>,
+    #   population_density <int>, transport_access <dbl>, lighting_coverage <dbl>,
+    #   distance_police_hub <int>, listed_building_share <dbl>, n_incidents <int>
+
+``` r
+pct_maple_foxley <- 100*(337+57) /987
+
+lighting_incidents <- areas_counts %>% 
+  st_drop_geometry() %>% 
+  mutate(high_lighting = lighting_coverage > 60) %>% 
+  group_by(high_lighting) %>% 
+  summarise(mean_incidents = mean(n_incidents))
+
+lighting_table <- areas_counts %>% 
+  st_drop_geometry() %>% 
+  filter(population_density > 10000) %>% 
+  select(ward_name, lighting_coverage, population_density, n_incidents) %>% 
+  arrange(desc(lighting_coverage))
+
+lighting_incidents_densely_pop <- lighting_table %>% 
+  st_drop_geometry() %>% 
+  mutate(high_lighting = lighting_coverage > 70) %>% 
+  group_by(high_lighting) %>% 
+  summarise(mean_incidents = mean(n_incidents))
+```
+
 Write your Task 3 answer here.
 
 Immediate priority should be given to the Maple Cross and Foxley area,
-as this is overwhelmingly the most incident dense area. Key strategies
-to decrease the number of incidents are:
+as this is overwhelmingly the most incident dense area, accounting for
+approximately 40% of all incidents.
+
+Key strategies to decrease the number of incidents are:
 
 1)  Build a police hub in the North of the city. The northernmost wards
     lie 5+ miles away from the nearest police hub, and there is strong
     evidence indicating incidents decrease the closer to the police hub
-    you are.
+    you are. It was found that 86.5% of all incidents were recorded in
+    Wards that were 4 or more miles from the nearest police hub.
 
 2)  Invest in food banks, social support, job centres etc in order to
-    lower unemployment and deprivation. Target these strategies on Maple
-    Cross and Market End, which have over 80 deprivation score and over
-    15% unemployment, the highest of any wards
+    lower unemployment and deprivation, as on average Wards with a
+    deprivation score over 70 experienced 76 more incidents compared to
+    those that didn’t. Target these strategies on Maple Cross and Market
+    End, which both have over 80 deprivation score and over 15%
+    unemployment, the highest of any wards, while also both ranking in
+    the top 3 of incidents recorded.
 
-3)  Install more street lighting in the North, as wards with over 75%
-    lighting coverage have significantly fewer incidents. It would be an
-    effective way of detering incidents from occuring, especially in the
-    densely populated areas.
+3)  Install more street lighting in densely populated areas such as
+    Saffron Lea and Maple Cross, as for wards with population density
+    over 10000 people/mile^2 the average no. incidents was 103 greater
+    when lighting coverage was lower than 70%.
 
 # References
 
@@ -420,4 +497,4 @@ to decrease the number of incidents are:
 
 Add references only if needed.
 
-    **Prose Word Count:** 786 words (214 words under the 1000-word limit)
+    **Prose Word Count:** 919 words (81 words under the 1000-word limit)
