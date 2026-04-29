@@ -28,7 +28,11 @@ incident_reports <- read.csv("data/incident_reports.csv")
 ``` r
 ward_profiles <- ward_profiles %>% 
   mutate(ward_name = gsub("-", " ", ward_name)) %>% 
-  mutate(rental_share = as.numeric(gsub("%","",rental_share)))
+  mutate(rental_share = as.numeric(gsub("%","",rental_share))) %>% 
+  mutate(
+    lighting_coverage = ifelse(lighting_coverage < 1,
+                               lighting_coverage * 100,
+                               lighting_coverage))
 
 ward_profiles_missing <- ward_profiles %>% 
   summarise(across(everything(), ~sum(is.na(.))))
@@ -38,7 +42,11 @@ The data was checked for inconsistent formatting in any variables.
 “ward_name” is inconsistent, as some have hyphens in ward_profiles but
 not in city_wards. “rental_share” in ward_profiles has inconsistent use
 of % sign. These were removed and then the values were asserted to be
-numeric.
+numeric. 2 values for “lighting_coverage” were deemed to be mistakes.
+Every Ward had values over 50 other than 2 wards which were 0.66 and
+0.90 respectively. These are most likely supposed to be 66 and 90, just
+inputted as decimals rather than percentages, hence these have been
+corrected.
 
 In ward_profiles there are 3 missing “transport_access” values and 3
 missing “listed_building_share” values. These have been kept to avoid
@@ -178,7 +186,7 @@ choropleth_map1
 ![](coursework_02_files/figure-commonmark/unnamed-chunk-9-1.png)
 
 When joining incident counts to the wards, there were some NAs as some
-wards had 0 incidents reported, hence these were replced by 0s. A log
+wards had 0 incidents reported, hence these were replaced by 0s. A log
 scale was added on the incidents to improve readability (and adjusted to
 avoid log0), as Maple Cross was significantly higher than the rest.
 Again there are greater numbers of incidents in the North, and there are
@@ -196,45 +204,48 @@ correlation_matrix <- areas_counts %>%
   select(n_incidents, unemployment_rate, deprivation_score, rental_share,
          population_density, transport_access, lighting_coverage,
          distance_police_hub, listed_building_share) %>% 
-  cor(use = "complete.obs") 
+  cor(use = "complete.obs") # genAI was used to understand this parameter to deal with missing values
 
 incident_correlations <- tibble(
   variable = names(correlation_matrix["n_incidents", ]),
   correlation = as.numeric(correlation_matrix["n_incidents", ])) %>% 
   arrange(desc(correlation))
 
-corplot1 <- areas_counts %>% 
-  ggplot(aes(x = unemployment_rate, y = log(n_incidents+1)))+
-  geom_point()+
-  geom_smooth(method=lm, se = FALSE)
+cor_data <- areas_counts %>% 
+  st_drop_geometry() %>% 
+  select(n_incidents,
+         unemployment_rate, deprivation_score,
+         distance_police_hub, lighting_coverage) %>% 
+  pivot_longer(
+    cols = -n_incidents,
+    names_to = "variable",
+    values_to = "value")
 
-corplot2 <- areas_counts %>% 
-  ggplot(aes(x = deprivation_score, y = log(n_incidents+1)))+
-  geom_point()+
-  geom_smooth(method=lm, se = FALSE)
+cor_data$variable <- recode(cor_data$variable,
+  unemployment_rate = "Unemployment (%)",
+  deprivation_score = "Deprivation score",
+  rental_share = "Rental share (%)",
+  distance_police_hub = "Distance to police (miles)",
+  lighting_coverage = "Lighting coverage (%)")
 
-corplot3 <- areas_counts %>% 
-  ggplot(aes(x = rental_share, y = log(n_incidents+1)))+
-  geom_point()+
-  geom_smooth(method=lm, se = FALSE)
-
-corplot4 <- areas_counts %>% 
-  ggplot(aes(x = distance_police_hub, y = log(n_incidents+1)))+
-  geom_point()+
-  geom_smooth(method=lm, se = FALSE)
-
-corplot5 <- areas_counts %>% 
-  filter(lighting_coverage>50) %>% 
-  ggplot(aes(x = lighting_coverage, y = log(n_incidents+1)))+
-  geom_point()+
-  geom_smooth(method=lm, se = FALSE)
+ggplot(cor_data, aes(x = value, y = log(n_incidents + 1))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~variable, scales = "free_x") +
+  theme_bw() +
+  labs(x = NULL, y = "No. incidents (log scale)", title = "Relationships between variables and incident counts")
 ```
+
+    `geom_smooth()` using formula = 'y ~ x'
+
+![](coursework_02_files/figure-commonmark/task-2-code-1.png)
 
 First, correlation between incident number and explanatory variables was
 computed, to see if any had a close relationship. Unemployment,
 deprivation and distance from police were all highly correlated with
-number of incidents in that ward. Lighting coverage displayed slight
-negative correlation.
+number of incidents in that ward. Lighting coverage displayed strong
+negative correlation. These were plotted against a log scale of the
+incidents to visualise the relationship.
 
 PCA was conducted:
 
@@ -450,11 +461,11 @@ Key strategies to decrease the number of incidents are:
 
 3)  Install more street lighting in densely populated areas such as
     Saffron Lea, Hazel Row and Maple Cross, as for wards with population
-    density over 10000 people/mile^2 the average no. incidents was 103
+    density over 10000 people/mile^2 the average no. incidents was 130
     greater when lighting coverage was lower than 70%.
 
 # References
 
 <!--- DO NOT DELETE THIS LINE - REFERENCES ANCHOR --->
 
-    **Prose Word Count:** 924 words (76 words under the 1000-word limit)
+    **Prose Word Count:** 988 words (12 words under the 1000-word limit)
