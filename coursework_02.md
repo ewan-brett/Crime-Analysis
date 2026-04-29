@@ -135,7 +135,7 @@ spatial_distribution_incidents <- incidents_wards %>%
   geom_sf(data = city_wards, fill = "grey98", colour = "black")+
   geom_sf(data = incidents_wards, alpha = 0.6, size = 0.6, colour = "black")+
   theme_bw()+
-  labs(title = "Spatial distribution of incident reports", x = "Longitude", y = "Latitude")
+  labs(title = "Exhibit #1: Spatial distribution of incident reports", x = "Longitude", y = "Latitude")
 
 spatial_distribution_incidents
 ```
@@ -151,7 +151,7 @@ incident_ppp <- ppp(
   window = as.owin(city_wards))
 
 density_map <- density.ppp(incident_ppp, edge = TRUE, sigma = 4000)
-plot(density_map, main = "Kernel-smoothed density of incidents")
+plot(density_map, main = "Exhibit #2: Kernel-smoothed density of incidents")
 ```
 
 ![](coursework_02_files/figure-commonmark/unnamed-chunk-8-1.png)
@@ -179,7 +179,7 @@ choropleth_map1 <- areas_counts %>%
     labs(
         x = "Longitude", y = "Latitude",
         fill = "Incidents\nper ward",
-        title = "Incidents per ward")
+        title = "Exhibit #3: Incidents per ward")
 choropleth_map1
 ```
 
@@ -233,7 +233,7 @@ ggplot(cor_data, aes(x = value, y = log(n_incidents + 1))) +
   geom_smooth(method = "lm", se = FALSE) +
   facet_wrap(~variable, scales = "free_x") +
   theme_bw() +
-  labs(x = NULL, y = "No. incidents (log scale)", title = "Relationships between variables and incident counts")
+  labs(x = NULL, y = "No. incidents (log scale)", title = "Exhibit #4: Relationships between variables and incident counts")
 ```
 
     `geom_smooth()` using formula = 'y ~ x'
@@ -283,8 +283,7 @@ choropleth_map2 <- areas_counts_pca %>%
   scale_fill_distiller(palette = "YlOrRd", trans = "reverse") +
   labs(
       x = "Longitude", y = "Latitude",
-      fill = "PC1\nby ward",
-      title = "PC1 effect by ward")
+      fill = "PC1\nby ward")
 
 PC1_barplot <- data.frame(
   variable = rownames(pcas),
@@ -295,8 +294,7 @@ PC1_barplot <- data.frame(
   theme_minimal() +
   labs(
     x = "Variable",
-    y = "PC1 loading",
-    title = "Loadings for\nPrincipal Component 1")
+    y = "PC1 loading",)
 
 
 areas_counts_pca$pca2 <- pca_result$x[,2]
@@ -313,7 +311,9 @@ choropleth_map3 <- areas_counts_pca %>%
       fill = "PC2\nby ward",
       title = "PC2 effect by ward")
 
-choropleth_map2 + PC1_barplot
+(choropleth_map2 + PC1_barplot) +
+  plot_annotation(
+    title = "Exhibit #5: PC1: Spatial pattern and Variable loadings") # genAI was used to create one title for the exhibit rather than two seperate plot titles.
 ```
 
 ![](coursework_02_files/figure-commonmark/unnamed-chunk-11-1.png)
