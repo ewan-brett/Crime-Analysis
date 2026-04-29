@@ -149,7 +149,8 @@ plot(density_map, main = "Kernel-smoothed density of incidents")
 ![](coursework_02_files/figure-commonmark/unnamed-chunk-8-1.png)
 
 Kernel-smoothed density showed the incidents most densely occurred in
-the North-East. Sigma=4000 was found to be optimal.
+the North-East. A bandwidth of 4000 was used to outline main density
+patterns without over emphasising certain points.
 
 A Choropleth map to investigate incidents per ward was plotted:
 
@@ -159,12 +160,12 @@ areas_counts <- city_wards_profiles %>%
   mutate(n_incidents = replace_na(n_incidents, 0))
 
 top_ward <- areas_counts %>% 
-  slice_max(n_incidents, n = 3)
+  slice_max(n_incidents, n = 4)
 
 choropleth_map1 <- areas_counts %>% 
   ggplot(aes(fill = (log(n_incidents+1)))) +
     geom_sf() +
-    geom_sf_text(data = top_ward, aes(label = ward_name), size = 3, colour = "green")+
+    geom_sf_text(data = top_ward, aes(label = ward_name), size = 3, colour = "green",check_overlap = TRUE)+
     theme_bw() +
     scale_fill_distiller(palette = "Reds", trans = "reverse") +
     labs(
@@ -315,7 +316,7 @@ pc1_scatter <- ggplot(areas_counts_pca, aes(x = pca1, y = log(n_incidents+1))) +
 
 Wards with missing values were removed in order to effectively carry out
 PCA. Approximately 48% of the variation between ward variables in
-explained by first principle component.
+explained by first principal component.
 
 PC1 represents a combination of high unemployment, deprivation, rental
 share, distance from police hub and lower lighting coverage. A
@@ -342,10 +343,10 @@ descriptions.
 
 Overall, these findings indicate that higher levels of deprivation,
 unemployment, and distance from police hub are the key factors
-associated with increased incident counts. Rental share is likely to
-increase as a by-product of higher deprivation in the area (higher
-deprivation means less people can afford their own house), so it has
-been discounted as a primary reason for trends found in task 1.
+associated with increased incident counts. Rental share was treated as
+secondary, rather than a direct factor as it is likely to increase as a
+by-product of higher deprivation in the area (higher deprivation means
+less people can afford their own house).
 
 # Task 3
 
@@ -427,8 +428,6 @@ lighting_incidents_densely_pop <- lighting_table %>%
   summarise(mean_incidents = mean(n_incidents))
 ```
 
-Write your Task 3 answer here.
-
 Immediate priority should be given to the Maple Cross and Foxley area,
 as this is overwhelmingly the most incident dense area, accounting for
 approximately 40% of all incidents.
@@ -441,23 +440,21 @@ Key strategies to decrease the number of incidents are:
     you are. It was found that 86.5% of all incidents were recorded in
     Wards that were 4 or more miles from the nearest police hub.
 
-2)  Invest in food banks, social support, job centres etc in order to
-    lower unemployment and deprivation, as on average Wards with a
-    deprivation score over 70 experienced 76 more incidents compared to
-    those that didn’t. Target these strategies on Maple Cross and Market
-    End, which both have over 80 deprivation score and over 15%
-    unemployment, the highest of any wards, while also both ranking in
-    the top 3 of incidents recorded.
+2)  Invest in food banks, social support, etc. to lower deprivation and
+    job centres/ employment schemes in order to lower unemployment, as
+    on average Wards with a deprivation score over 70 experienced 76
+    more incidents compared to those that didn’t. Target these
+    strategies on Maple Cross and Market End, which both have over 80
+    deprivation score and over 15% unemployment, the highest of any
+    wards, while also both ranking in the top 3 of incidents recorded.
 
 3)  Install more street lighting in densely populated areas such as
-    Saffron Lea and Maple Cross, as for wards with population density
-    over 10000 people/mile^2 the average no. incidents was 103 greater
-    when lighting coverage was lower than 70%.
+    Saffron Lea, Hazel Row and Maple Cross, as for wards with population
+    density over 10000 people/mile^2 the average no. incidents was 103
+    greater when lighting coverage was lower than 70%.
 
 # References
 
 <!--- DO NOT DELETE THIS LINE - REFERENCES ANCHOR --->
 
-Add references only if needed.
-
-    **Prose Word Count:** 919 words (81 words under the 1000-word limit)
+    **Prose Word Count:** 924 words (76 words under the 1000-word limit)
