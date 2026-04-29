@@ -227,16 +227,7 @@ corplot5 <- areas_counts %>%
   ggplot(aes(x = lighting_coverage, y = log(n_incidents+1)))+
   geom_point()+
   geom_smooth(method=lm, se = FALSE)
-
-(corplot1 + corplot2) / (corplot3 + corplot4)
 ```
-
-    `geom_smooth()` using formula = 'y ~ x'
-    `geom_smooth()` using formula = 'y ~ x'
-    `geom_smooth()` using formula = 'y ~ x'
-    `geom_smooth()` using formula = 'y ~ x'
-
-![](coursework_02_files/figure-commonmark/task-2-code-1.png)
 
 First, correlation between incident number and explanatory variables was
 computed, to see if any had a close relationship. Unemployment,
@@ -401,16 +392,6 @@ unemployment_rate_table <- areas_counts %>%
   arrange(desc(unemployment_rate))
 
 
-ggplot(areas_counts, aes(x = distance_police_hub, y = n_incidents)) +
-  geom_point() +
-  geom_smooth(se = FALSE) +
-  theme_minimal()+
-  labs(title = "Distance from police hub vs no. of incidents", x = "Distance from police hub (miles)", y = "No. of incidents")
-```
-
-![](coursework_02_files/figure-commonmark/task-3-code-1.png)
-
-``` r
 dep_incidents <- areas_counts %>% 
   st_drop_geometry() %>% 
   mutate(high_dep = deprivation_score > 70) %>% 
@@ -425,24 +406,6 @@ police_distance_incidents <- areas_counts %>%
   group_by(high_distance) %>% 
   summarise(mean_incidents = mean(n_incidents), percentage = 100*sum(n_incidents)/total_incidents)
 
-areas_counts %>% 
-  filter(ward_name == "Foxley")
-```
-
-    Simple feature collection with 1 feature and 11 fields
-    Geometry type: POLYGON
-    Dimension:     XY
-    Bounding box:  xmin: 456986.4 ymin: 344513.4 xmax: 458553.9 ymax: 345908.9
-    Projected CRS: OSGB36 / British National Grid
-    # A tibble: 1 × 12
-      ward_id ward_name                                   geometry unemployment_rate
-    * <chr>   <chr>                                  <POLYGON [m]>             <dbl>
-    1 W16     Foxley    ((458553.9 345684.9, 457948.9 344538.3, 4…                14
-    # ℹ 8 more variables: deprivation_score <dbl>, rental_share <dbl>,
-    #   population_density <int>, transport_access <dbl>, lighting_coverage <dbl>,
-    #   distance_police_hub <int>, listed_building_share <dbl>, n_incidents <int>
-
-``` r
 pct_maple_foxley <- 100*(337+57) /987
 
 lighting_incidents <- areas_counts %>% 
