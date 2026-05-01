@@ -38,20 +38,17 @@ ward_profiles_missing <- ward_profiles %>%
   summarise(across(everything(), ~sum(is.na(.))))
 ```
 
-The data was checked for inconsistent formatting in any variables.
-“ward_name” is inconsistent, as some have hyphens in ward_profiles but
-not in city_wards. “rental_share” in ward_profiles has inconsistent use
-of % sign. These were removed and then the values were asserted to be
-numeric. 2 values for “lighting_coverage” were deemed to be mistakes.
-Every Ward had values over 50 other than 2 wards which were 0.66 and
-0.90 respectively. These are most likely supposed to be 66 and 90, just
-inputted as decimals rather than percentages, hence these have been
-corrected.
+The data was checked for inconsistent formatting. Some “ward_name” have
+hyphens in ward_profiles but not in city_wards. “rental_share” in
+ward_profiles has inconsistent use of % sign so were removed and values
+were asserted to be numeric. 2 values for “lighting_coverage” were
+deemed mistakes: every Ward had values \>50 other than 2 wards which
+were 0.66 and 0.90. These were likely inputted as decimals rather than
+percentages.
 
-In ward_profiles there are 3 missing “transport_access” values and 3
-missing “listed_building_share” values. These have been kept to avoid
-losing data unnecessarily in other variables, and will be deal with
-seperately when doing specific analysis.
+In ward_profiles there are 6 missing values. These have been kept to
+avoid losing data unnecessarily, and will be dealt with seperately when
+doing specific analysis on variables.
 
 ``` r
 city_wards_profiles <- city_wards %>% 
@@ -59,9 +56,9 @@ city_wards_profiles <- city_wards %>%
 ```
 
 The ward geometries and info were joined by ward_id and ward_name, as
-these now match after data cleaning. left_join() was used in order to
-keep all 32 ward geometries, and add info from ward_profiles without
-risk of losing anything.
+these now match after data-cleaning. left_join() was used in order to
+keep all 32 ward geometries and add info from ward_profiles without risk
+of losing anything.
 
 ``` r
 incident_sf <- st_as_sf(incident_reports, coords = c("x", "y"), crs = st_crs(city_wards_profiles)) 
@@ -73,9 +70,9 @@ no_mislabelled_incidents <- incidents_wards %>%
   nrow()    # 39 mislabelled incidents.
 ```
 
-Incident reports were joined to the their wards by geometry by
-st_join(). Some labels given on the reports were found to be inaccurate,
-with 39 mislabels compared to coordinates given.
+Incident reports were joined to their wards by geometry by st_join().
+Some labels given on the reports were found to be inaccurate, with 39
+mislabels compared to coordinates given.
 
 ``` r
 incidents_wards <- incidents_wards %>% 
@@ -86,11 +83,11 @@ Throughout analysis raw coordinates were used as they were more likely
 to be accurate than labels, as they are less prone to data entry issues
 or confusion near borders.
 
-Scales of each variable were interpreted: - unemployment_rate (%) -
-deprivation_score (0-100) i.e. higher score higher deprivation -
-rental_share (%) - population_density (people/mile^2) - transport_access
-(% people with transport accessible by foot) - lighting_coverage (%
-roads/paths covered by streetlamps) - distance_police_hub (miles) -
+Interpreted scales of each variable: - unemployment_rate (%) -
+deprivation_score (0-100) higher score higher deprivation - rental_share
+(%) - population_density (people/mile^2) - transport_access (% people
+with transport accessible by foot) - lighting_coverage (% roads/paths
+covered by streetlamps) - distance_police_hub (miles) -
 listed_building_share (%)
 
 # Task 1
@@ -120,8 +117,8 @@ incidents_per_ward_plot <- top_incidents_per_ward %>%
 ```
 
 Incidents per ward were computed: there was significant variation
-between wards, with some wards such as “Canal Side” having no incidents,
-and others having many incidents such as “Maple Cross” with 337.
+between wards, with wards such as “Canal Side” having no incidents, and
+others having many incidents such as “Maple Cross” with 337.
 
 ``` r
 spatial_distribution_incidents <- incidents_wards %>% 
@@ -179,12 +176,11 @@ choropleth_map1
 
 ![](coursework_02_files/figure-commonmark/unnamed-chunk-9-1.png)
 
-When joining incident counts to the wards, there were some NAs as some
-wards had 0 incidents reported, hence these were replaced by 0s. A log
-scale was added on the incidents to improve readability (and adjusted to
-avoid log0), as Maple Cross was significantly higher than the rest.
-Again there are greater numbers of incidents in the North, and there are
-hotspots in the East and North-west.
+When joining incident counts to the wards, NAs were replaced by 0s. A
+log scale was added on the incidents to improve readability (and
+adjusted to avoid log0), as Maple Cross was significantly higher than
+the rest. There are greater numbers of incidents in the North, and there
+are density hotspots in the North-east.
 
 # Task 2
 
@@ -234,7 +230,7 @@ ggplot(cor_data, aes(x = value, y = log(n_incidents + 1))) +
 
 ![](coursework_02_files/figure-commonmark/task-2-code-1.png)
 
-First, correlation between incident number and explanatory variables was
+Correlation between incident number and explanatory variables was
 computed, to see if any had a close relationship. Unemployment,
 deprivation and distance from police were all highly correlated with
 number of incidents in that ward. Lighting coverage displayed
@@ -319,12 +315,12 @@ pc1_scatter <- ggplot(areas_counts_pca, aes(x = pca1, y = log(n_incidents+1))) +
   labs(x = "PC1 loading", y = "No. incidents", title = "PC1 loadings vs No. incidents")
 ```
 
-Wards with missing values were removed in order to effectively carry out
-PCA. Approximately 48% of the variation between ward variables in
-explained by first principal component.
+Wards with NAs were removed in order to effectively carry out PCA.
+Approximately 48% of the variation between ward variables in explained
+by PC1.
 
-PC1 represents a combination of high unemployment, deprivation, rental
-share, distance from police hub and lower lighting coverage. A
+PC1 represents a combination of high unemployment, deprivation,
+rental_share, distance from police hub and low lighting_coverage. A
 choropleth map of the PC1 scores showed a noticeable south to north
 increase. This is aligned with our increase in incident frequency
 further north displayed in task 1, as shown by the incident locations
@@ -347,11 +343,22 @@ does not seem to be the case after inspection of the incident
 descriptions.
 
 Overall, these findings indicate that higher levels of deprivation,
-unemployment, and distance from police hub are the key factors
-associated with increased incident counts. Rental share was treated as
-secondary, rather than a direct factor as it is likely to increase as a
-by-product of higher deprivation in the area (higher deprivation means
-less people can afford their own house).
+unemployment, distance from police and lighting coverage are key factors
+associated with increased incident counts. These are justifiable reasons
+as:
+
+- Higher poverty areas and people not having jobs leads to more
+  delinquency as people try to get by
+
+- High distance from police surveillance encourages incidents as people
+  are less likely to be caught and held responsible
+
+- Higher street lighting deters incidents as people are more likely to
+  be seen and identified.
+
+Rental share was treated as secondary, rather than a direct factor as it
+is likely to increase as a by-product of higher deprivation in the area
+(higher deprivation means less people can afford their own house).
 
 # Task 3
 
@@ -462,4 +469,4 @@ Key strategies to decrease the number of incidents are:
 
 <!--- DO NOT DELETE THIS LINE - REFERENCES ANCHOR --->
 
-    **Prose Word Count:** 987 words (13 words under the 1000-word limit)
+    **Prose Word Count:** 984 words (16 words under the 1000-word limit)
