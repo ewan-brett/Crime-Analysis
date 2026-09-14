@@ -1,1 +1,5 @@
-
+Main contents:
+-coursework_02.qmd: main project file
+-coursework_02.md: rendered markdown file
+-coursework_02.Rproj: the RStudio project file
+-data/: the coursework datasets
